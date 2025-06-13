@@ -1,0 +1,86 @@
+services:
+  db:
+    image: postgres:17.2-alpine
+    restart: always
+    ports:
+      - "8081:5432"
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: example
+    volumes:
+      - hezzl-test-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+    networks:
+      - app-network
+# ------------------------------------------------------------------------------------------
+  nats:
+    image: nats:latest
+    restart: always
+#    ports:
+#      - "4222:4222"
+#      - "6222:6222"
+#      - "8222:8222"
+    networks:
+      - app-network
+# ------------------------------------------------------------------------------------------
+  ch:
+    image: clickhouse:lts
+    restart: on-failure
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    ports:
+      - "8123:8123" # http api
+    #  - 9000:9000 # native
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: user
+      CLICKHOUSE_PASSWORD: example
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - hezzl-test-ch:/var/lib/clickhouse
+      - hezzl-test-ch-logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+# ------------------------------------------------------------------------------------------
+  hezzl-test:
+    build:
+      context: .
+      dockerfile: hezzl-test.Dockerfile
+    environment:
+      RUN_ADDRESS: "0.0.0.0:8080"
+      POSTGRES_DSN: "postgres://postgres:example@db:5432/postgres"
+      CLICKHOUSE_ADDRESS: "ch:9000"
+      CLICKHOUSE_USER: user
+      CLICKHOUSE_PASSWORD: example
+      NATS_ADDR: "nats://nats:4222"
+      REDIS_DSN: "1"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      ch:
+        condition: service_healthy
+    networks:
+      - app-network
+# ------------------------------------------------------------------------------------------
+networks:
+  app-network:
+    driver: bridge
+# ------------------------------------------------------------------------------------------
+volumes:
+  hezzl-test-pg:
+  hezzl-test-ch:
+  hezzl-test-ch-logs:
