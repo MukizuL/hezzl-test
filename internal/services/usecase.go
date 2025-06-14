@@ -91,6 +91,10 @@ func (s *Services) Reprioritize(ctx context.Context, id, projectId, newPriority 
 		return nil, err
 	}
 
+	for _, good := range newGoods {
+		s.logger.InfoNats(good.ID, good.ProjectID, good.Name, good.Description, good.Priority, good.Removed)
+	}
+
 	var resp []dto.ReprioritizeResponse
 	for _, g := range newGoods {
 		resp = append(resp, dto.ReprioritizeResponse{
