@@ -12,6 +12,7 @@ import (
 type Repo interface {
 	CreateGoods(ctx context.Context, projectId int, name string) (int, error)
 	GetGood(ctx context.Context, id int) (*models.Goods, error)
+	GetGoods(ctx context.Context) ([]models.Goods, error)
 	UpdateGood(ctx context.Context, id, projectId int, name, description string) error
 	RemoveGoods(ctx context.Context, id, projectId int) error
 }

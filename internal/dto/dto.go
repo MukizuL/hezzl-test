@@ -26,3 +26,12 @@ type RemoveGoodsResponse struct {
 	ProjectID int  `json:"project_id"`
 	Removed   bool `json:"removed"`
 }
+
+type ReprioritizeRequest struct {
+	Priority int `json:"newPriority" binding:"required"`
+}
+
+type ReprioritizeResponse struct {
+	ID       int `json:"id"`
+	Priority int `json:"priority"`
+}

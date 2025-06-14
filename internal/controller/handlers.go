@@ -192,5 +192,73 @@ func (c *Controller) GetGoods(ctx *gin.Context) {
 }
 
 func (c *Controller) ReprioritizeGoods(ctx *gin.Context) {
-	ctx.JSON(200, gin.H{})
+	rawId := ctx.Query("id")
+	rawProjectId := ctx.Query("projectId")
+
+	id, err := strconv.Atoi(rawId)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"message": "id must be an integer",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	projectId, err := strconv.Atoi(rawProjectId)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"message": "projectId must be an integer",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	if id <= 0 || projectId <= 0 {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"message": "id and projectId must be greater than zero",
+			"details": "",
+		})
+		return
+	}
+
+	var data dto.ReprioritizeRequest
+	err = ctx.BindJSON(&data)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"message": "Incorrect body",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	rawResp, err := c.services.Reprioritize(ctx.Request.Context(), id, projectId, data.Priority)
+	if err != nil {
+		if errors.Is(err, errs.ErrGoodsNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{
+				"code":    3,
+				"message": "errors.common.notFound",
+				"details": "",
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"code":    http.StatusInternalServerError,
+			"message": "Internal server error",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	resp := struct {
+		Priorities []dto.ReprioritizeResponse `json:"priorities"`
+	}{
+		Priorities: rawResp,
+	}
+
+	ctx.JSON(http.StatusOK, resp)
 }
