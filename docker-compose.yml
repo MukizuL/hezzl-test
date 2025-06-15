@@ -54,6 +54,17 @@ services:
     networks:
       - app-network
 # ------------------------------------------------------------------------------------------
+  redis:
+    image: redis:8.0
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+# ------------------------------------------------------------------------------------------
   hezzl-test:
     build:
       context: .
@@ -65,7 +76,7 @@ services:
       CLICKHOUSE_USER: user
       CLICKHOUSE_PASSWORD: example
       NATS_ADDR: "nats://nats:4222"
-      REDIS_DSN: "1"
+      REDIS_DSN: "redis:6379"
     ports:
       - "8080:8080"
     depends_on:

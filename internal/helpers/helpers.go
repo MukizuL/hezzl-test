@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"github.com/MukizuL/hezzl-test/internal/dto"
 	"github.com/MukizuL/hezzl-test/internal/errs"
 	"github.com/MukizuL/hezzl-test/internal/models"
 	"sort"
@@ -51,4 +52,37 @@ func Reprioritize(goods []models.Goods, id, projectID, newPriority int) ([]model
 	})
 
 	return result, nil
+}
+
+func GetGoodsResponse(goods []models.Goods, limit, offset int) *dto.GetGoodsResponse {
+	var respGoods []dto.CreateGoodsResponse
+	total, removed := 0, 0
+
+	for _, good := range goods {
+		total++
+		respGoods = append(respGoods, dto.CreateGoodsResponse{
+			ID:          good.ID,
+			ProjectID:   good.ProjectID,
+			Name:        good.Name,
+			Description: good.Description,
+			Priority:    good.Priority,
+			Removed:     good.Removed,
+			CreatedAt:   good.CreatedAt,
+		})
+		if good.Removed {
+			removed++
+		}
+	}
+
+	meta := &dto.Meta{
+		Total:   total,
+		Removed: removed,
+		Limit:   limit,
+		Offset:  offset,
+	}
+
+	return &dto.GetGoodsResponse{
+		Meta:  meta,
+		Goods: respGoods,
+	}
 }

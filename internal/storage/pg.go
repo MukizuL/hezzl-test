@@ -86,12 +86,12 @@ func (s *Storage) GetGood(ctx context.Context, id int) (*models.Goods, error) {
 	return &goods, nil
 }
 
-func (s *Storage) GetGoods(ctx context.Context) ([]models.Goods, error) {
+func (s *Storage) GetGoodsSortPriority(ctx context.Context) ([]models.Goods, error) {
 	var result []models.Goods
 	rows, err := s.pg.Query(ctx, `SELECT id, project_id, name, COALESCE(description, ''), priority, removed, created_at FROM goods ORDER BY priority`)
 	if err != nil {
 		s.logger.Error("Failed to get goods",
-			zap.String("method", "GetGoods"),
+			zap.String("method", "GetGoodsSortPriority"),
 			zap.Error(err))
 
 		return nil, errs.ErrInternalServerError
@@ -103,7 +103,7 @@ func (s *Storage) GetGoods(ctx context.Context) ([]models.Goods, error) {
 		err = rows.Scan(&goods.ID, &goods.ProjectID, &goods.Name, &goods.Description, &goods.Priority, &goods.Removed, &goods.CreatedAt)
 		if err != nil {
 			s.logger.Error("Error in row",
-				zap.String("method", "GetGoods"),
+				zap.String("method", "GetGoodsSortPriority"),
 				zap.Error(err))
 			continue
 		}
@@ -113,7 +113,7 @@ func (s *Storage) GetGoods(ctx context.Context) ([]models.Goods, error) {
 
 	if rows.Err() != nil {
 		s.logger.Error("Error in rows",
-			zap.String("method", "GetGoods"),
+			zap.String("method", "GetGoodsSortPriority"),
 			zap.Error(err))
 
 		return nil, errs.ErrInternalServerError
@@ -121,6 +121,83 @@ func (s *Storage) GetGoods(ctx context.Context) ([]models.Goods, error) {
 
 	if len(result) == 0 {
 		return nil, errs.ErrGoodsNotFound
+	}
+
+	return result, nil
+}
+
+func (s *Storage) GetGoodsSortId(ctx context.Context) ([]models.Goods, error) {
+	var result []models.Goods
+	rows, err := s.pg.Query(ctx, `SELECT id, project_id, name, COALESCE(description, ''), priority, removed, created_at FROM goods ORDER BY priority`)
+	if err != nil {
+		s.logger.Error("Failed to get goods",
+			zap.String("method", "GetGoodsSortPriority"),
+			zap.Error(err))
+
+		return nil, errs.ErrInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var goods models.Goods
+		err = rows.Scan(&goods.ID, &goods.ProjectID, &goods.Name, &goods.Description, &goods.Priority, &goods.Removed, &goods.CreatedAt)
+		if err != nil {
+			s.logger.Error("Error in row",
+				zap.String("method", "GetGoodsSortPriority"),
+				zap.Error(err))
+			continue
+		}
+
+		result = append(result, goods)
+	}
+
+	if rows.Err() != nil {
+		s.logger.Error("Error in rows",
+			zap.String("method", "GetGoodsSortPriority"),
+			zap.Error(err))
+
+		return nil, errs.ErrInternalServerError
+	}
+
+	if len(result) == 0 {
+		return nil, errs.ErrGoodsNotFound
+	}
+
+	return result, nil
+}
+
+func (s *Storage) GetGoodsWithLimit(ctx context.Context, limit, offset int) ([]models.Goods, error) {
+	var result []models.Goods
+	rows, err := s.pg.Query(ctx, `SELECT id, project_id, name, COALESCE(description, ''), priority, removed, created_at
+									  FROM goods ORDER BY id LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		s.logger.Error("Failed to get goods",
+			zap.String("method", "GetGoodsWithLimit"),
+			zap.Error(err))
+
+		return nil, errs.ErrInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var goods models.Goods
+		err = rows.Scan(&goods.ID, &goods.ProjectID, &goods.Name, &goods.Description, &goods.Priority, &goods.Removed, &goods.CreatedAt)
+		if err != nil {
+			s.logger.Error("Error in row",
+				zap.String("method", "GetGoodsWithLimit"),
+				zap.Error(err))
+			continue
+		}
+
+		result = append(result, goods)
+	}
+
+	if rows.Err() != nil {
+		s.logger.Error("Error in rows",
+			zap.String("method", "GetGoodsWithLimit"),
+			zap.Error(err))
+
+		return nil, errs.ErrInternalServerError
 	}
 
 	return result, nil

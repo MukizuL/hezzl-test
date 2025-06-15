@@ -188,7 +188,56 @@ func (c *Controller) RemoveGoods(ctx *gin.Context) {
 }
 
 func (c *Controller) GetGoods(ctx *gin.Context) {
-	ctx.JSON(200, gin.H{})
+	rawLimit := ctx.Query("limit")
+	if rawLimit == "" {
+		rawLimit = "10"
+	}
+
+	rawOffset := ctx.Query("offset")
+	if rawOffset == "" {
+		rawOffset = "1"
+	}
+
+	limit, err := strconv.Atoi(rawLimit)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"message": "Limit must be an integer",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	offset, err := strconv.Atoi(rawOffset)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"message": "offset must be an integer",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	if limit < 0 || offset < 0 {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"message": "Limit and offset must be greater than zero",
+			"details": "",
+		})
+		return
+	}
+
+	resp, err := c.services.GetGoods(ctx.Request.Context(), limit, offset)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"code":    http.StatusInternalServerError,
+			"message": "Internal server error",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, resp)
 }
 
 func (c *Controller) ReprioritizeGoods(ctx *gin.Context) {

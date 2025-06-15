@@ -35,3 +35,15 @@ type ReprioritizeResponse struct {
 	ID       int `json:"id"`
 	Priority int `json:"priority"`
 }
+
+type GetGoodsResponse struct {
+	Meta  *Meta                 `json:"meta"`
+	Goods []CreateGoodsResponse `json:"goods"`
+}
+
+type Meta struct {
+	Total   int `json:"total"`
+	Removed int `json:"removed"`
+	Limit   int `json:"limit"`
+	Offset  int `json:"offset"`
+}

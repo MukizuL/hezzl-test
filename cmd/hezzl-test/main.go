@@ -11,6 +11,8 @@ import (
 	"github.com/MukizuL/hezzl-test/internal/storage/drivers/ch"
 	"github.com/MukizuL/hezzl-test/internal/storage/drivers/nats"
 	"github.com/MukizuL/hezzl-test/internal/storage/drivers/pg"
+	"github.com/MukizuL/hezzl-test/internal/storage/drivers/redis"
+	"github.com/MukizuL/hezzl-test/internal/workers"
 	"github.com/MukizuL/hezzl-test/internal/zlog"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
@@ -24,7 +26,7 @@ func main() {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
 		createApp(),
-		fx.Invoke(func(*http.Server) {}),
+		fx.Invoke(func(*http.Server) {}, func(*workers.NATSConsumer) {}),
 	).Run()
 }
 
@@ -41,11 +43,13 @@ func createApp() fx.Option {
 
 		pg.Provide(),
 		ch.Provide(),
+		redis.Provide(),
 		storage.Provide(),
 
 		nats.Provide(),
 		zlog.Provide(),
 
 		services.Provide(),
+		workers.Provide(),
 	)
 }

@@ -2,8 +2,12 @@ package services
 
 import (
 	"context"
+	"errors"
 	"github.com/MukizuL/hezzl-test/internal/dto"
+	"github.com/MukizuL/hezzl-test/internal/errs"
 	"github.com/MukizuL/hezzl-test/internal/helpers"
+	"github.com/MukizuL/hezzl-test/internal/models"
+	"go.uber.org/zap"
 )
 
 func (s *Services) CreateGoods(ctx context.Context, projectId int, name string) (*dto.CreateGoodsResponse, error) {
@@ -55,6 +59,8 @@ func (s *Services) UpdateGoods(ctx context.Context, id, projectId int, name, des
 		CreatedAt:   goods.CreatedAt,
 	}
 
+	s.storage.Invalidate(ctx)
+
 	return resp, nil
 }
 
@@ -77,11 +83,13 @@ func (s *Services) RemoveGoods(ctx context.Context, id, projectId int) (*dto.Rem
 		Removed:   true,
 	}
 
+	s.storage.Invalidate(ctx)
+
 	return resp, nil
 }
 
 func (s *Services) Reprioritize(ctx context.Context, id, projectId, newPriority int) ([]dto.ReprioritizeResponse, error) {
-	goods, err := s.storage.GetGoods(ctx)
+	goods, err := s.storage.GetGoodsSortPriority(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -103,5 +111,33 @@ func (s *Services) Reprioritize(ctx context.Context, id, projectId, newPriority 
 		})
 	}
 
+	s.storage.Invalidate(ctx)
+
 	return resp, nil
+}
+
+func (s *Services) GetGoods(ctx context.Context, limit, offset int) (*dto.GetGoodsResponse, error) {
+	var goods []models.Goods
+	goods, err := s.storage.Get(ctx, limit, offset)
+	if err != nil {
+		if !errors.Is(err, errs.ErrCacheMiss) {
+			s.logger.ZapLogger.Error("Redis error", zap.Error(err))
+		}
+	} else {
+		s.logger.ZapLogger.Info("Took from Redis")
+		return helpers.GetGoodsResponse(goods, limit, offset), nil
+	}
+
+	err = s.storage.Set(ctx)
+	if err != nil {
+		s.logger.ZapLogger.Error("Redis error", zap.Error(err))
+	}
+
+	goods, err = s.storage.GetGoodsWithLimit(ctx, limit, offset)
+	if err != nil {
+		s.logger.ZapLogger.Info("Took from Postgres")
+		return nil, err
+	}
+
+	return helpers.GetGoodsResponse(goods, limit, offset), nil
 }
